@@ -1,5 +1,5 @@
 {
-  "name": "n8n-nodes-avro-deserializer",
+  "name": "n8n-nodes-confluent-kafka-avro",
   "version": "0.1.0",
   "description": "",
   "keywords": [
@@ -37,7 +37,8 @@
       "dist/credentials/ConfluentKafkaApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/ConfluentKafkaTrigger/ConfluentKafkaTrigger.node.js"
+      "dist/nodes/ConfluentKafka/ConfluentKafkaTrigger.node.js",
+      "dist/nodes/ConfluentKafka/ConfluentKafka.node.js"
     ]
   },
   "devDependencies": {
