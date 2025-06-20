@@ -1,10 +1,13 @@
 {
-  "name": "n8n-nodes-confluent-kafka-avro",
+  "name": "@elparking/n8n-nodes-confluent-kafka-avro",
   "version": "0.1.1",
   "description": "Nodes to work with Confluent Kafka with authentication",
   "keywords": [
     "n8n-community-node-package"
   ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
   "license": "MIT",
   "homepage": "",
   "author": {
