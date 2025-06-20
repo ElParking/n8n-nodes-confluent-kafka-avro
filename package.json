@@ -1,15 +1,15 @@
 {
   "name": "n8n-nodes-confluent-kafka-avro",
   "version": "0.1.0",
-  "description": "",
+  "description": "Nodes to work with Confluent Kafka with authentication",
   "keywords": [
     "n8n-community-node-package"
   ],
   "license": "MIT",
   "homepage": "",
   "author": {
-    "name": "",
-    "email": ""
+    "name": "Jose Maria Alvarez",
+    "email": "josemaria.alvarez@elparking.com"
   },
   "repository": {
     "type": "git",
