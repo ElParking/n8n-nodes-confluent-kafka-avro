@@ -132,11 +132,6 @@ export class ConfluentKafkaTrigger implements INodeType {
 						name: 'parallelProcessing',
 						type: 'boolean',
 						default: true,
-						displayOptions: {
-							hide: {
-								'@version': [1],
-							},
-						},
 						description:
 							'Whether to process messages in parallel or by keeping the message in order',
 					},
@@ -167,6 +162,18 @@ export class ConfluentKafkaTrigger implements INodeType {
 						description: 'The time to await a response in ms',
 						hint: 'Value in milliseconds',
 					},
+					{
+						displayName: 'Max Parallel Messages',
+						name: 'maxParallelMessages',
+						type: 'number',
+						default: 1,
+						description: 'Maximum number of messages to process in parallel when parallelProcessing is disabled',
+						displayOptions: {
+							show: {
+								parallelProcessing: [false],
+							},
+						},
+					},
 				],
 			},
 		],
@@ -187,7 +194,11 @@ export class ConfluentKafkaTrigger implements INodeType {
 
 		const options = this.getNodeParameter('options', {}) as IDataObject;
 
-		options.nodeVersion = this.getNode().typeVersion;
+		const maxParallelMessages = options.maxParallelMessages as number || 1;
+
+		const promiseArray: Promise<IRun>[] = [];
+
+		var activeMessages = 0;
 
 		const config: KafkaConfig = {
 			clientId,
@@ -231,7 +242,12 @@ export class ConfluentKafkaTrigger implements INodeType {
 		// The "closeFunction" function gets called by n8n whenever
 		// the workflow gets deactivated and can so clean up.
 		async function closeFunction() {
-			await consumer.disconnect();
+			try {
+				await consumer.disconnect();
+				console.log('Consumer disconnected successfully');
+			} catch (error) {
+				console.error('Error disconnecting consumer:', error);
+			}
 		}
 
 		const startConsumer = async () => {
@@ -244,6 +260,7 @@ export class ConfluentKafkaTrigger implements INodeType {
 				eachMessage: async ({ topic: messageTopic, message }) => {
 					let data: IDataObject = {};
 					let value = message.value?.toString() as string;
+					activeMessages++;
 
 					if (useSchemaRegistry) {
 						try {
@@ -283,14 +300,19 @@ export class ConfluentKafkaTrigger implements INodeType {
 						data = value;
 					}
 					let responsePromise = undefined;
-					if (!parallelProcessing && (options.nodeVersion as number) > 1) {
+					if (!parallelProcessing) {
 						responsePromise = this.helpers.createDeferredPromise<IRun>();
 						this.emit([this.helpers.returnJsonArray([data])], undefined, responsePromise);
+						promiseArray.push(responsePromise.promise);
 					} else {
 						this.emit([this.helpers.returnJsonArray([data])]);
 					}
-					if (responsePromise) {
-						await responsePromise.promise;
+					if (activeMessages >= maxParallelMessages) {
+						for(const promise of promiseArray) {
+							await promise;
+							activeMessages--;
+						}
+						promiseArray.length = 0; // Clear the array after processing
 					}
 				},
 			});
