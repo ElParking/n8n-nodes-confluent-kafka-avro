@@ -315,7 +315,7 @@ export class ConfluentKafka implements INodeType {
 						this.logger.error(`Error in confluent kafka processing: ${exception}`)
 						throw new NodeOperationError(
 							this.getNode(),
-							'Verify your Schema Registry configuration',
+							`Verify your Schema Registry configuration: ${exception.message}`,
 						);
 					}
 				}
