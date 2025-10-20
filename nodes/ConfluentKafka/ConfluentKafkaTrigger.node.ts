@@ -163,6 +163,22 @@ export class ConfluentKafkaTrigger implements INodeType {
 						hint: 'Value in milliseconds',
 					},
 					{
+						displayName: 'Connection Timeout',
+						name: 'connectionTimeout',
+						type: 'number',
+						default: 30000,
+						description: 'Time in ms to wait for connection to be established',
+						hint: 'Value in milliseconds',
+					},
+					{
+						displayName: 'Request Timeout',
+						name: 'requestTimeout',
+						type: 'number',
+						default: 30000,
+						description: 'Time in ms to wait for a request to complete',
+						hint: 'Value in milliseconds',
+					},
+					{
 						displayName: 'Max Parallel Messages',
 						name: 'maxParallelMessages',
 						type: 'number',
@@ -205,6 +221,20 @@ export class ConfluentKafkaTrigger implements INodeType {
 			brokers,
 			ssl,
 			logLevel: logLevel.ERROR,
+			// Add connection timeout and retry configuration
+			connectionTimeout: this.getNodeParameter('options.connectionTimeout', 30000) as number,
+			requestTimeout: this.getNodeParameter('options.requestTimeout', 30000) as number,
+			retry: {
+				initialRetryTime: 100,
+				retries: 8,
+				maxRetryTime: 30000,
+				factor: 2,
+				multiplier: 2,
+				restartOnFailure: async (e) => {
+					console.error('Kafka connection failed, restarting:', e);
+					return true;
+				}
+			}
 		};
 
 		if (credentials.authentication === true) {
@@ -237,6 +267,17 @@ export class ConfluentKafkaTrigger implements INodeType {
 			maxInFlightRequests,
 			sessionTimeout: this.getNodeParameter('options.sessionTimeout', 30000) as number,
 			heartbeatInterval: this.getNodeParameter('options.heartbeatInterval', 3000) as number,
+			// Add additional consumer configuration for better reliability
+			metadataMaxAge: 300000, // 5 minutes
+			allowAutoTopicCreation: options.allowAutoTopicCreation as boolean || false,
+			maxBytesPerPartition: 1048576, // 1MB
+			minBytes: 1,
+			maxBytes: 10485760, // 10MB
+			maxWaitTimeInMs: 5000,
+			retry: {
+				initialRetryTime: 100,
+				retries: 8
+			}
 		});
 
 		// The "closeFunction" function gets called by n8n whenever

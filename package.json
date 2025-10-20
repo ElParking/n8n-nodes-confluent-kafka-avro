@@ -1,6 +1,6 @@
 {
   "name": "@elparking/n8n-nodes-confluent-kafka-avro",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "Nodes to work with Confluent Kafka with authentication",
   "keywords": [
     "n8n-community-node-package"
