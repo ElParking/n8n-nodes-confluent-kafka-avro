@@ -3,13 +3,17 @@ import type { KafkaConfig, SASLOptions, TopicMessages } from 'kafkajs';
 import { CompressionTypes, Kafka as apacheKafka } from 'kafkajs';
 import type {
 	IExecuteFunctions,
+	ICredentialDataDecryptedObject,
+	ICredentialsDecrypted,
+	ICredentialTestFunctions,
 	IDataObject,
+	INodeCredentialTestResult,
 	INodeExecutionData,
+	IPairedItemData,
 	INodeType,
 	INodeTypeDescription,
-	IPairedItemData,
 } from 'n8n-workflow';
-import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
+import { ApplicationError, NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 
 function generatePairedItemData(length: number): IPairedItemData[] {
 	return Array.from({ length }, (_, item) => ({
@@ -29,8 +33,8 @@ export class ConfluentKafka implements INodeType {
 			name: 'Confluent Kafka',
 		},
 		usableAsTool: true,
-		inputs: [NodeConnectionType.Main],
-		outputs: [NodeConnectionType.Main],
+		inputs: [NodeConnectionTypes.Main],
+		outputs: [NodeConnectionTypes.Main],
 		credentials: [
 			{
 				name: 'confluentKafka',
@@ -213,6 +217,58 @@ export class ConfluentKafka implements INodeType {
 				],
 			},
 		],
+	};
+
+	methods = {
+		credentialTest: {
+			async kafkaConnectionTest(
+				this: ICredentialTestFunctions,
+				credential: ICredentialsDecrypted,
+			): Promise<INodeCredentialTestResult> {
+				const credentials = credential.data as ICredentialDataDecryptedObject;
+				try {
+					const brokers = ((credentials.brokers as string) || '')
+						.split(',')
+						.map((item) => item.trim());
+
+					const clientId = credentials.clientId as string;
+
+					const ssl = credentials.ssl as boolean;
+
+					const config: KafkaConfig = {
+						clientId,
+						brokers,
+						ssl,
+					};
+					if (credentials.authentication === true) {
+						if (!(credentials.username && credentials.password)) {
+							throw new ApplicationError('Username and password are required for authentication', {
+								level: 'warning',
+							});
+						}
+						config.sasl = {
+							username: credentials.username as string,
+							password: credentials.password as string,
+							mechanism: credentials.saslMechanism as string,
+						} as SASLOptions;
+					}
+
+					const kafka = new apacheKafka(config);
+
+					await kafka.admin().connect();
+					await kafka.admin().disconnect();
+					return {
+						status: 'OK',
+						message: 'Authentication successful',
+					};
+				} catch (error) {
+					return {
+						status: 'Error',
+						message: error.message,
+					};
+				}
+			},
+		},
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
